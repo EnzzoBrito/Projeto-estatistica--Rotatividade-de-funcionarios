@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>Plataforma de Modelagem Estatística — Rotatividade de Funcionários (HR Analytics)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="style.css?v=2">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+
+<body class="theme-dark">
+  <div class="app-layout">
+
+    <header class="app-header">
+      <div class="header-brand">
+        <div class="brand-badge">PROJETO ESTATÍSTICA</div>
+        <h1>Modelagem Estatística & Explorador de Dados</h1>
+      </div>
+      <div class="header-nav">
+        <button class="nav-tab active" data-tab="tab-overview">
+          <span class="tab-icon">📊</span>
+          <span class="tab-title">Exploração & KPIs</span>
+        </button>
+        <button class="nav-tab" data-tab="tab-hypotheses">
+          <span class="tab-icon">📐</span>
+          <span class="tab-title">Testes de Hipóteses</span>
+        </button>
+        <button class="nav-tab" data-tab="tab-regression">
+          <span class="tab-icon">📈</span>
+          <span class="tab-title">Regressão Linear & Diagnóstico</span>
+        </button>
+        <button class="nav-tab" data-tab="tab-simulator">
+          <span class="tab-icon">🎯</span>
+          <span class="tab-title">Simulador Preditivo</span>
+        </button>
+        <button class="nav-tab" data-tab="tab-impact">
+          <span class="tab-icon">⚖️</span>
+          <span class="tab-title">Simulação de Decisão</span>
+        </button>
+        <button class="nav-tab" data-tab="tab-data">
+          <span class="tab-icon">📋</span>
+          <span class="tab-title">Dados Amostrais</span>
+        </button>
+      </div>
+      <div class="header-status">
+        <span class="status-indicator"></span>
+        <span id="backend-status-text">Backend Conectado</span>
+      </div>
+    </header>
+
+
+
+    <section class="filter-bar">
+      <div class="filter-header">
+        <span class="filter-title">Filtros Dinâmicos Globais</span>
+        <button id="btn-reset-filters" class="btn-secondary btn-sm">Redefinir Filtros</button>
+      </div>
+      <div class="filter-controls">
+        <div class="filter-group">
+          <label for="filter-department">Departamento:</label>
+          <select id="filter-department">
+            <option value="all">Todos os Departamentos</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label for="filter-overtime">Hora Extra:</label>
+          <select id="filter-overtime">
+            <option value="all">Todos (Com e Sem)</option>
+            <option value="Yes">Apenas Com Hora Extra</option>
+            <option value="No">Apenas Sem Hora Extra</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label for="filter-marital">Estado Civil:</label>
+          <select id="filter-marital">
+            <option value="all">Todos os Estados Civis</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label for="filter-joblevel">Nível do Cargo:</label>
+          <select id="filter-joblevel">
+            <option value="all">Todos os Níveis (1 a 5)</option>
+            <option value="1">Nível 1 (Júnior)</option>
+            <option value="2">Nível 2 (Pleno)</option>
+            <option value="3">Nível 3 (Sênior)</option>
+            <option value="4">Nível 4 (Especialista/Gerente)</option>
+            <option value="5">Nível 5 (Diretoria)</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label for="filter-jobrole">Cargo:</label>
+          <select id="filter-jobrole">
+            <option value="all">Todos os Cargos</option>
+          </select>
+        </div>
+        <div class="filter-group filter-slider">
+          <label>Idade Amostral: <span id="age-range-label" class="mono">18 - 60</span></label>
+          <div class="range-inputs">
+            <input type="range" id="filter-age-min" min="18" max="60" value="18">
+            <input type="range" id="filter-age-max" min="18" max="60" value="60">
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <main class="main-content">
+
+      <div id="tab-overview" class="tab-pane active">
+
+        <div class="kpi-grid">
+
+          <div class="kpi-card">
+            <div class="kpi-label">Tamanho da Subamostra</div>
+            <div class="kpi-value mono" id="kpi-total-n">--</div>
+            <div class="kpi-subtext" id="kpi-total-sub">Total de observações filtradas</div>
+          </div>
+          <div class="kpi-card highlight-card">
+            <div class="kpi-label">Taxa Amostral de Rotatividade</div>
+            <div class="kpi-value mono" id="kpi-attrition-rate">--%</div>
+            <div class="kpi-subtext">
+              <span id="kpi-attrition-count" class="mono">--</span> saídas observadas
+            </div>
+            <div class="kpi-footer mono" id="kpi-wilson-ci">IC 95% Wilson: [--%, --%]</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Renda Mensal Média</div>
+            <div class="kpi-value mono" id="kpi-mean-income">R$ --</div>
+            <div class="kpi-subtext">Mediana: <span id="kpi-median-income" class="mono">R$ --</span></div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Idade Média</div>
+            <div class="kpi-value mono" id="kpi-mean-age">-- anos</div>
+            <div class="kpi-subtext">Mediana: <span id="kpi-median-age" class="mono">-- anos</span></div>
+          </div>
+        </div>
+
+        <div class="charts-grid">
+          <div class="chart-card">
+            <div class="chart-header">
+              <div>
+                <h3 class="chart-title">Taxa de Rotatividade por Categoria</h3>
+                <p class="chart-objective">Objetivo: Comparar a proporção de saídas observada em cada estrato com o
+                  limiar médio global da amostra (linha pontilhada branca).</p>
+              </div>
+              <div class="chart-controls">
+                <select id="select-category-breakdown">
+                  <option value="overTime">Hora Extra</option>
+                  <option value="maritalStatus">Estado Civil</option>
+                  <option value="department">Departamento</option>
+                  <option value="jobLevel">Nível do Cargo</option>
+                  <option value="jobRole">Cargo</option>
+                  <option value="businessTravel">Viagens de Negócios</option>
+                  <option value="ageGroup">Faixa Etária</option>
+                </select>
+              </div>
+            </div>
+            <div class="chart-body">
+              <canvas id="chart-cat-breakdown"></canvas>
+            </div>
+          </div>
+
+          <div class="chart-card">
+            <div class="chart-header">
+              <div>
+                <h3 class="chart-title">Distribuição de Renda por Status de Rotatividade</h3>
+                <p class="chart-objective">Objetivo: Analisar os parâmetros de dispersão salarial (Média, Mediana, Q1 e
+                  Q3) comparativamente entre funcionários que saíram e permaneceram.</p>
+              </div>
+            </div>
+            <div class="chart-body">
+              <canvas id="chart-income-dist"></canvas>
+            </div>
+          </div>
+
+          <div class="chart-card">
+            <div class="chart-header">
+              <div>
+                <h3 class="chart-title">Dispersão: Idade vs. Renda Mensal por Rotatividade</h3>
+                <p class="chart-objective">Objetivo: Explorar a distribuição bivariada entre tempo de vida e
+                  remuneração, identificando a concentração de desligamentos ao longo do plano cartesiano.</p>
+              </div>
+            </div>
+            <div class="chart-body">
+              <canvas id="chart-age-income-scatter"></canvas>
+            </div>
+          </div>
+
+          <div class="chart-card">
+            <div class="chart-header">
+              <div>
+                <h3 class="chart-title">Matriz de Correlações Lineares de Pearson</h3>
+                <p class="chart-objective">Objetivo: Avaliar a magnitude e direção dos coeficientes de correlação linear
+                  (r) entre as principais variáveis numéricas da base.</p>
+              </div>
+            </div>
+            <div class="chart-body table-responsive">
+              <table class="correlation-table" id="table-correlation">
+
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+
+      <div id="tab-hypotheses" class="tab-pane">
+        <div class="section-intro">
+          <h2>Validação Estatística: Testes de Hipóteses & Intervalos de Confiança</h2>
+          <p class="section-subtitle">
+            Estrutura formal de testes estatísticos para confirmar ou refutar associações empíricas com nível de
+            significância de &alpha; = 0,05 e Intervalos de Confiança bilaterais de 95%.
+          </p>
+        </div>
+
+        <div class="hypothesis-summary-cards">
+
+          <div class="stat-card" id="card-h1">
+            <div class="stat-card-badge">H1 — Proporções</div>
+            <h4>Rotatividade vs. Regime de Horas Extras</h4>
+            <div class="formula-box mono">
+              H₀: p_com = p_sem | H₁: p_com &ne; p_sem
+            </div>
+            <div class="stat-metrics-grid">
+              <div><span class="lbl">Com Hora Extra:</span> <strong id="h1-p1" class="mono">--%</strong></div>
+              <div><span class="lbl">Sem Hora Extra:</span> <strong id="h1-p2" class="mono">--%</strong></div>
+              <div><span class="lbl">Diferença (&Delta;p):</span> <strong id="h1-diff" class="mono">-- p.p.</strong>
+              </div>
+              <div><span class="lbl">Estatística z:</span> <strong id="h1-z" class="mono">--</strong></div>
+              <div><span class="lbl">&chi;² (gl = 1):</span> <strong id="h1-chi2" class="mono">--</strong></div>
+              <div><span class="lbl">p-valor:</span> <strong id="h1-p" class="mono">--</strong></div>
+            </div>
+            <div class="ci-badge mono" id="h1-ci">IC 95% da Diferença: [-- p.p., -- p.p.]</div>
+          </div>
+
+
+          <div class="stat-card" id="card-h2">
+            <div class="stat-card-badge">H2 — Médias (Welch)</div>
+            <h4>Renda Mensal vs. Rotatividade</h4>
+            <div class="formula-box mono">
+              H₀: &mu;_saiu = &mu;_ficou | H₁: &mu;_saiu &ne; &mu;_ficou
+            </div>
+            <div class="stat-metrics-grid">
+              <div><span class="lbl">Média Quem Saiu:</span> <strong id="h2-m1" class="mono">R$ --</strong></div>
+              <div><span class="lbl">Média Quem Ficou:</span> <strong id="h2-m2" class="mono">R$ --</strong></div>
+              <div><span class="lbl">Diferença de Médias:</span> <strong id="h2-diff" class="mono">R$ --</strong></div>
+              <div><span class="lbl">t de Welch:</span> <strong id="h2-t" class="mono">--</strong></div>
+              <div><span class="lbl">gl (Satterthwaite):</span> <strong id="h2-gl" class="mono">--</strong></div>
+              <div><span class="lbl">p-valor (Welch):</span> <strong id="h2-p" class="mono">--</strong></div>
+              <div><span class="lbl">p-valor (Mann-Whitney):</span> <strong id="h2-mw-p" class="mono">--</strong></div>
+            </div>
+            <div class="ci-badge mono" id="h2-ci">IC 95% (Welch): [R$ --, R$ --]</div>
+          </div>
+
+
+          <div class="stat-card" id="card-h3">
+            <div class="stat-card-badge">H3 — Médias (Welch)</div>
+            <h4>Idade vs. Rotatividade</h4>
+            <div class="formula-box mono">
+              H₀: &mu;_idade_saiu = &mu;_idade_ficou | H₁: &mu;_idade_saiu &ne; &mu;_idade_ficou
+            </div>
+            <div class="stat-metrics-grid">
+              <div><span class="lbl">Média Quem Saiu:</span> <strong id="h3-m1" class="mono">-- anos</strong></div>
+              <div><span class="lbl">Média Quem Ficou:</span> <strong id="h3-m2" class="mono">-- anos</strong></div>
+              <div><span class="lbl">Diferença de Médias:</span> <strong id="h3-diff" class="mono">-- anos</strong>
+              </div>
+              <div><span class="lbl">t de Welch:</span> <strong id="h3-t" class="mono">--</strong></div>
+              <div><span class="lbl">gl (Satterthwaite):</span> <strong id="h3-gl" class="mono">--</strong></div>
+              <div><span class="lbl">p-valor:</span> <strong id="h3-p" class="mono">--</strong></div>
+            </div>
+            <div class="ci-badge mono" id="h3-ci">IC 95% (Welch): [-- anos, -- anos]</div>
+          </div>
+
+
+          <div class="stat-card" id="card-h4">
+            <div class="stat-card-badge">H4 — Independência</div>
+            <h4>Estado Civil vs. Rotatividade</h4>
+            <div class="formula-box mono">
+              H₀: Estado civil e saída independentes | H₁: Variáveis associadas
+            </div>
+            <div class="stat-metrics-grid">
+              <div><span class="lbl">&chi;² de Pearson:</span> <strong id="h4-chi2" class="mono">--</strong></div>
+              <div><span class="lbl">Graus de Liberdade:</span> <strong id="h4-gl" class="mono">2</strong></div>
+              <div><span class="lbl">V de Cramér:</span> <strong id="h4-cramer" class="mono">--</strong></div>
+              <div><span class="lbl">p-valor (&chi;²):</span> <strong id="h4-p" class="mono">--</strong></div>
+              <div><span class="lbl">Frequência Esp. Mín:</span> <strong id="h4-exp" class="mono">--</strong></div>
+            </div>
+            <div class="ci-badge mono" id="h4-obs-desc">Taxa: Solteiros 25,5% | Casados 12,5% | Divorciados 9,2%</div>
+          </div>
+
+
+          <div class="stat-card" id="card-h5">
+            <div class="stat-card-badge">H5 — Integração com Regressão</div>
+            <h4>Resíduo Salarial (IncomeGap) vs. Rotatividade</h4>
+            <div class="formula-box mono">
+              H₀: &mu;_gap_saiu = &mu;_gap_ficou | H₁: &mu;_gap_saiu &ne; &mu;_gap_ficou
+            </div>
+            <div class="stat-metrics-grid">
+              <div><span class="lbl">Gap Médio Quem Saiu:</span> <strong id="h5-m1" class="mono">R$ --</strong></div>
+              <div><span class="lbl">Gap Médio Quem Ficou:</span> <strong id="h5-m2" class="mono">R$ --</strong></div>
+              <div><span class="lbl">Diferença de Gap:</span> <strong id="h5-diff" class="mono">R$ --</strong></div>
+              <div><span class="lbl">t de Welch:</span> <strong id="h5-t" class="mono">--</strong></div>
+              <div><span class="lbl">gl (Satterthwaite):</span> <strong id="h5-gl" class="mono">--</strong></div>
+              <div><span class="lbl">p-valor:</span> <strong id="h5-p" class="mono">--</strong></div>
+            </div>
+            <div class="ci-badge mono" id="h5-ci">IC 95%: [R$ --, R$ --] (cruza o zero)</div>
+          </div>
+        </div>
+
+
+        <div class="chart-card" style="margin-top: 1.5rem;">
+          <div class="chart-header">
+            <div>
+              <h3 class="chart-title">Visualizador Gráfico de Intervalos de Confiança (95%)</h3>
+              <p class="chart-objective">Objetivo: Avaliar a precisão das estimativas intervalares das diferenças
+                amostrais e verificar a distância em relação à hipótese nula (linha zero tracejada).</p>
+            </div>
+          </div>
+          <div class="chart-body">
+            <canvas id="chart-ci-forest"></canvas>
+          </div>
+        </div>
+
+
+        <div class="card-custom-test">
+          <div class="custom-test-header">
+            <h3>Calculadora de Testes de Hipótese em Tempo Real</h3>
+            <p>Selecione qualquer atributo da base de dados para executar o teste estatístico correspondente entre os
+              grupos de saída (Sim vs Não):</p>
+          </div>
+          <div class="custom-test-controls">
+            <select id="select-custom-var">
+              <optgroup label="Variáveis Contínuas (Teste t de Welch & Mann-Whitney)">
+                <option value="DistanceFromHome">Distância de Casa (DistanceFromHome)</option>
+                <option value="TotalWorkingYears">Total de Anos Trabalhados (TotalWorkingYears)</option>
+                <option value="YearsAtCompany">Anos na Empresa (YearsAtCompany)</option>
+                <option value="YearsInCurrentRole">Anos no Cargo Atual (YearsInCurrentRole)</option>
+                <option value="YearsSinceLastPromotion">Anos desde Última Promoção (YearsSinceLastPromotion)</option>
+                <option value="YearsWithCurrManager">Anos com o Gerente Atual (YearsWithCurrManager)</option>
+                <option value="PercentSalaryHike">% Aumento Salarial (PercentSalaryHike)</option>
+                <option value="JobSatisfaction">Satisfação no Trabalho (JobSatisfaction)</option>
+                <option value="EnvironmentSatisfaction">Satisfação Ambiental (EnvironmentSatisfaction)</option>
+                <option value="NumCompaniesWorked">Nº Empresas Anteriores (NumCompaniesWorked)</option>
+              </optgroup>
+              <optgroup label="Variáveis Categóricas (Teste Qui-Quadrado)">
+                <option value="Department">Departamento</option>
+                <option value="JobRole">Cargo</option>
+                <option value="JobLevel">Nível do Cargo</option>
+                <option value="EducationField">Área de Formação</option>
+                <option value="BusinessTravel">Frequência de Viagem</option>
+                <option value="Gender">Gênero</option>
+              </optgroup>
+            </select>
+            <button id="btn-run-custom-test" class="btn-primary">Calcular Teste Estatístico</button>
+          </div>
+          <div id="custom-test-results" class="custom-results-box mono" style="display: none;">
+
+          </div>
+        </div>
+      </div>
+
+
+      <div id="tab-regression" class="tab-pane">
+        <div class="section-intro">
+          <h2>Modelagem Estatística: Regressão Linear Múltipla (Variável Dependente: Renda Mensal)</h2>
+          <p class="section-subtitle">
+            Implementação analítica de Mínimos Quadrados Ordinários (MQO), verificação dos pressupostos de Gauss-Markov
+            e métricas de generalização.
+          </p>
+        </div>
+
+
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-label">R² de Treino (MQO Analítico)</div>
+            <div class="kpi-value mono" id="reg-r2-tr">--</div>
+            <div class="kpi-subtext">R² Ajustado: <span id="reg-r2-adj" class="mono">--</span></div>
+          </div>
+          <div class="kpi-card highlight-card">
+            <div class="kpi-label">R² em Dados de Teste (Não Vistos)</div>
+            <div class="kpi-value mono" id="reg-r2-te">--</div>
+            <div class="kpi-subtext">5-Fold CV Médio: <span id="reg-cv-mean" class="mono">--</span></div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Erros de Previsão (Conjunto de Teste)</div>
+            <div class="kpi-value mono" id="reg-rmse">R$ --</div>
+            <div class="kpi-subtext">MAE: <span id="reg-mae" class="mono">R$ --</span></div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Teste F Global & Graus de Liberdade</div>
+            <div class="kpi-value mono" id="reg-f-stat">F = --</div>
+            <div class="kpi-subtext">gl_reg = 5, gl_res = <span id="reg-gl-res" class="mono">1170</span> (p &lt; 0.001)
+            </div>
+          </div>
+        </div>
+
+
+        <div class="card-table" style="margin-top: 1.5rem;">
+          <div class="card-table-header">
+            <h3>Tabela de Coeficientes MQO, Erros-Padrão e Testes t Individuais</h3>
+            <span class="badge-neutral">N = 1.176 | k = 6 parâmetros</span>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table" id="table-reg-coefs">
+              <thead>
+                <tr>
+                  <th>Variável Preditora</th>
+                  <th>Coeficiente (&beta;)</th>
+                  <th>Erro Padrão (SE)</th>
+                  <th>Estatística t</th>
+                  <th>p-valor</th>
+                  <th>IC 95% Inferior</th>
+                  <th>IC 95% Superior</th>
+                  <th>VIF</th>
+                </tr>
+              </thead>
+              <tbody class="mono">
+
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+
+        <div class="diagnostics-summary-grid" style="margin-top: 1.5rem;">
+          <div class="diag-card">
+            <div class="diag-title">Homocedasticidade: Teste de Breusch-Pagan</div>
+            <div class="diag-metric mono" id="diag-bp-stat">LM = -- | p = --</div>
+            <div class="diag-desc">H₀: Variância dos resíduos é constante (&sigma;²). Com p &lt; 0,05, rejeita-se
+              homocedasticidade pura (heterocedasticidade detectada).</div>
+          </div>
+          <div class="diag-card">
+            <div class="diag-title">Normalidade dos Resíduos: Shapiro-Wilk</div>
+            <div class="diag-metric mono" id="diag-sw-stat">W = -- | p = --</div>
+            <div class="diag-desc">Avaliação de desvios da distribuição normal. Para amostras de grande porte (N &gt;
+              1000), a inspeção gráfica Q-Q é prioritária.</div>
+          </div>
+          <div class="diag-card">
+            <div class="diag-title">Multicolinearidade: Fator de Inflação da Variância</div>
+            <div class="diag-metric mono" id="diag-vif-stat">VIF Máximo = 4,47</div>
+            <div class="diag-desc">Todos os preditores apresentaram VIF inferior a 5, atestando ausência de
+              multicolinearidade severa entre as variáveis explicativas.</div>
+          </div>
+        </div>
+
+        <div class="charts-grid" style="margin-top: 1.5rem;">
+          <div class="chart-card">
+            <div class="chart-header">
+              <div>
+                <h3 class="chart-title">Resíduos vs. Valores Ajustados (&Ycirc;)</h3>
+                <p class="chart-objective">Objetivo: Avaliar visualmente a suposição de linearidade e a constância da
+                  variância dos erros ao longo da escala de predição.</p>
+              </div>
+            </div>
+            <div class="chart-body">
+              <canvas id="chart-res-fitted"></canvas>
+            </div>
+          </div>
+
+          <div class="chart-card">
+            <div class="chart-header">
+              <div>
+                <h3 class="chart-title">Gráfico Q-Q Normal dos Resíduos</h3>
+                <p class="chart-objective">Objetivo: Comparar os quantis empíricos dos resíduos padronizados contra os
+                  quantis teóricos da distribuição normal padrão N(0,1).</p>
+              </div>
+            </div>
+            <div class="chart-body">
+              <canvas id="chart-qq-plot"></canvas>
+            </div>
+          </div>
+
+          <div class="chart-card">
+            <div class="chart-header">
+              <div>
+                <h3 class="chart-title">Renda Real vs. Renda Prevista (Conjunto de Teste)</h3>
+                <p class="chart-objective">Objetivo: Confrontar as observações reais com as previsões do modelo na
+                  amostra de teste, tendo a bissetriz (vermelha) como ajuste ideal.</p>
+              </div>
+            </div>
+            <div class="chart-body">
+              <canvas id="chart-actual-pred"></canvas>
+            </div>
+          </div>
+
+          <div class="chart-card">
+            <div class="chart-header">
+              <div>
+                <h3 class="chart-title">Comparação: Modelo Linear vs. Log-Linear</h3>
+                <p class="chart-objective">Objetivo: Contrastar as características métricas entre a modelagem em escala
+                  original (R$) e em escala logarítmica (ln(Renda)).</p>
+              </div>
+            </div>
+            <div class="chart-body table-responsive">
+              <table class="data-table mono">
+                <thead>
+                  <tr>
+                    <th>Dimensão Avaliada</th>
+                    <th>Modelo Linear Original</th>
+                    <th>Modelo Log-Linear</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Alvo (Y)</td>
+                    <td>MonthlyIncome (R$)</td>
+                    <td>ln(MonthlyIncome)</td>
+                  </tr>
+                  <tr>
+                    <td>R² no Teste</td>
+                    <td id="cmp-r2-orig">0,8944</td>
+                    <td id="cmp-r2-log">0,8254</td>
+                  </tr>
+                  <tr>
+                    <td>Interpretação &beta;</td>
+                    <td>Acréscimo fixo em Reais (R$)</td>
+                    <td>Variação percentual aproximada (%)</td>
+                  </tr>
+                  <tr>
+                    <td>Breusch-Pagan p-valor</td>
+                    <td>3,42 &times; 10⁻¹⁴</td>
+                    <td>0,0196</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+
+      <div id="tab-simulator" class="tab-pane">
+        <div class="section-intro">
+          <h2>Simulador Preditivo de Salário & Avaliação de Desvio (Income Gap)</h2>
+          <p class="section-subtitle">
+            Aplicação do modelo linear estimado para prever a remuneração de perfis específicos, calculando o Intervalo
+            de Confiança da Média e o Intervalo de Predição Individual com 95% de confiança.
+          </p>
+        </div>
+
+        <div class="simulator-layout">
+
+          <div class="sim-card sim-inputs">
+            <h3>Parâmetros do Perfil Profissional</h3>
+
+            <div class="sim-control-group">
+              <div class="sim-label-row">
+                <label for="sim-joblevel">Nível do Cargo (JobLevel):</label>
+                <span id="sim-joblevel-val" class="mono">2</span>
+              </div>
+              <input type="range" id="sim-joblevel" min="1" max="5" value="2" step="1">
+              <div class="slider-ticks"><span>1 (Júnior)</span><span>2</span><span>3</span><span>4</span><span>5
+                  (Diretoria)</span></div>
+            </div>
+
+            <div class="sim-control-group">
+              <div class="sim-label-row">
+                <label for="sim-age">Idade (Age):</label>
+                <span id="sim-age-val" class="mono">35 anos</span>
+              </div>
+              <input type="range" id="sim-age" min="18" max="65" value="35" step="1">
+            </div>
+
+            <div class="sim-control-group">
+              <div class="sim-label-row">
+                <label for="sim-totalworking">Total de Anos de Carreira:</label>
+                <span id="sim-totalworking-val" class="mono">10 anos</span>
+              </div>
+              <input type="range" id="sim-totalworking" min="0" max="40" value="10" step="1">
+            </div>
+
+            <div class="sim-control-group">
+              <div class="sim-label-row">
+                <label for="sim-yearscompany">Anos na Empresa Atual:</label>
+                <span id="sim-yearscompany-val" class="mono">5 anos</span>
+              </div>
+              <input type="range" id="sim-yearscompany" min="0" max="40" value="5" step="1">
+            </div>
+
+            <div class="sim-control-group">
+              <div class="sim-label-row">
+                <label for="sim-yearspromotion">Anos desde Última Promoção:</label>
+                <span id="sim-yearspromotion-val" class="mono">1 ano</span>
+              </div>
+              <input type="range" id="sim-yearspromotion" min="0" max="15" value="1" step="1">
+            </div>
+
+            <div class="sim-control-group"
+              style="margin-top: 1rem; border-top: 1px solid var(--border-color); padding-top: 1rem;">
+              <label for="sim-actualincome">Salário Atual Efetivo (Opcional - R$):</label>
+              <input type="number" id="sim-actualincome" placeholder="Ex: 5500" class="input-text mono">
+              <small class="text-muted">Utilizado para calcular o resíduo individual (IncomeGap = Salário Real &minus;
+                Previsto).</small>
+            </div>
+
+            <button id="btn-calc-sim" class="btn-primary" style="width: 100%; margin-top: 1.25rem;">Calcular Previsão
+              Estatística</button>
+          </div>
+
+
+          <div class="sim-card sim-outputs">
+            <h3>Resultados da Estimação Paramétrica</h3>
+
+            <div class="sim-result-box">
+              <div class="sim-result-label">Salário Previsto pelo Modelo (&Ycirc;)</div>
+              <div class="sim-result-value mono" id="sim-out-predicted">R$ --</div>
+            </div>
+
+            <div class="sim-intervals-grid">
+              <div class="interval-box">
+                <div class="interval-title">Intervalo de Confiança da Média (95%)</div>
+                <div class="interval-value mono" id="sim-out-mean-ci">[R$ --, R$ --]</div>
+                <div class="interval-desc">Faixa esperada para a renda média populacional de todos os indivíduos com
+                  esse perfil exato.</div>
+              </div>
+
+              <div class="interval-box highlight-interval">
+                <div class="interval-title">Intervalo de Predição Individual (95%)</div>
+                <div class="interval-value mono" id="sim-out-pred-ci">[R$ --, R$ --]</div>
+                <div class="interval-desc">Faixa que incorpora a variância individual (&sigma;²_res). É mais largo
+                  porque abrange o desvio de uma pessoa específica.</div>
+              </div>
+            </div>
+
+
+            <div id="sim-gap-container" class="sim-gap-box" style="display: none;">
+              <div class="sim-gap-header">
+                <span>Avaliação do Desvio (IncomeGap):</span>
+                <strong id="sim-gap-status" class="badge-status">--</strong>
+              </div>
+              <div class="sim-gap-val mono" id="sim-gap-value">R$ --</div>
+              <p class="sim-gap-desc" id="sim-gap-explanation"></p>
+            </div>
+
+
+            <div class="sim-math-details mono">
+              <div>Alavancagem x₀'(X'X)⁻¹x₀: <span id="sim-out-leverage">--</span></div>
+              <div>Erro-padrão da predição: <span id="sim-out-se-pred">--</span></div>
+              <div>gl residual utilizado: 1170 | t_crítico = 1,962</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+
+      <div id="tab-impact" class="tab-pane">
+        <div class="section-intro">
+          <h2>Simulação de Cenários de Decisão & Avaliação de Impacto Prático</h2>
+          <p class="section-subtitle">
+            Dimensionamento numérico dos efeitos de intervenções gerenciais sustentadas pelas evidências dos testes de
+            hipótese e modelo de regressão.
+          </p>
+        </div>
+
+        <div class="impact-layout">
+
+          <div class="impact-card">
+            <h3>Parâmetro da Intervenção Gerencial</h3>
+            <p>Selecione o percentual hipotético de redução da sobrecarga de horas extras sobre o contingente de
+              colaboradores:</p>
+
+            <div class="impact-slider-container">
+              <div class="sim-label-row">
+                <label>Intensidade da Intervenção:</label>
+                <span id="impact-slider-val" class="mono"
+                  style="font-size: 1.25rem; font-weight: 700; color: var(--accent-cyan);">100% (Redução Total da Taxa
+                  Excedente)</span>
+              </div>
+              <input type="range" id="impact-slider" min="10" max="100" value="100" step="5">
+              <div class="slider-ticks">
+                <span>10%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span>
+              </div>
+            </div>
+
+            <div class="impact-baseline-stats">
+              <div class="stat-row">
+                <span>Total de funcionários em regime de hora extra:</span>
+                <strong class="mono" id="impact-ot-count">416 colaboradores</strong>
+              </div>
+              <div class="stat-row">
+                <span>Taxa de saída observada COM hora extra:</span>
+                <strong class="mono" id="impact-ot-rate">30,53%</strong>
+              </div>
+              <div class="stat-row">
+                <span>Taxa de saída observada SEM hora extra:</span>
+                <strong class="mono" id="impact-not-rate">10,44%</strong>
+              </div>
+              <div class="stat-row">
+                <span>Diferença empírica de proporções (&Delta;p):</span>
+                <strong class="mono" id="impact-diff-rate">20,09 p.p.</strong>
+              </div>
+            </div>
+          </div>
+
+
+          <div class="impact-card impact-results-card">
+            <h3>Projeção de Saídas Evasivas Evitadas</h3>
+
+            <div class="impact-kpi-box">
+              <div class="impact-kpi-label">Desligamentos Evitados (Estimativa Pontual)</div>
+              <div class="impact-kpi-val mono" id="impact-avoided-point">83,6 colaboradores</div>
+              <div class="impact-kpi-sub" id="impact-pct-total">Corresponde a 35,3% de todas as saídas da organização
+              </div>
+            </div>
+
+            <div class="impact-ci-box">
+              <div class="impact-ci-label">Intervalo de Confiança a 95% do Impacto Projetado</div>
+              <div class="impact-ci-val mono" id="impact-ci-range">[63,6 a 103,5 saídas evitadas]</div>
+              <div class="impact-ci-desc">Limites calculados através da propagação do Intervalo de Confiança de 95% da
+                diferença de proporções [15,3%, 24,9%].</div>
+            </div>
+          </div>
+        </div>
+
+
+        <div class="card-table" style="margin-top: 1.5rem;">
+          <div class="card-table-header">
+            <h3>Matriz de Vulnerabilidade: Intersecção entre Hora Extra e Estado Civil</h3>
+            <span class="badge-neutral">Frequências e Taxas de Evasão Observadas</span>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table mono">
+              <thead>
+                <tr>
+                  <th>Regime de Hora Extra</th>
+                  <th>Estado Civil</th>
+                  <th>Total de Funcionários (N)</th>
+                  <th>Casos de Saída (k)</th>
+                  <th>Taxa de Evasão (%)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Não (Sem Hora Extra)</td>
+                  <td>Divorciado</td>
+                  <td>236</td>
+                  <td>14</td>
+                  <td>5,93%</td>
+                </tr>
+                <tr>
+                  <td>Não (Sem Hora Extra)</td>
+                  <td>Casado</td>
+                  <td>489</td>
+                  <td>43</td>
+                  <td>8,79%</td>
+                </tr>
+                <tr>
+                  <td>Não (Sem Hora Extra)</td>
+                  <td>Solteiro</td>
+                  <td>329</td>
+                  <td>53</td>
+                  <td>16,11%</td>
+                </tr>
+                <tr>
+                  <td>Sim (Com Hora Extra)</td>
+                  <td>Divorciado</td>
+                  <td>91</td>
+                  <td>19</td>
+                  <td>20,88%</td>
+                </tr>
+                <tr>
+                  <td>Sim (Com Hora Extra)</td>
+                  <td>Casado</td>
+                  <td>184</td>
+                  <td>41</td>
+                  <td>22,28%</td>
+                </tr>
+                <tr style="background: rgba(239, 68, 68, 0.15); font-weight: 700;">
+                  <td>Sim (Com Hora Extra)</td>
+                  <td>Solteiro</td>
+                  <td>141</td>
+                  <td>70</td>
+                  <td>49,65%</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+
+      <div id="tab-data" class="tab-pane">
+        <div class="section-intro">
+          <h2>Base de Dados Processada & Dicionário de Variáveis</h2>
+          <p class="section-subtitle">
+            Visualização tabular dos microdados com as variáveis derivadas calculadas (incluindo o resíduo do modelo de
+            regressão: IncomeGap).
+          </p>
+        </div>
+
+        <div class="card-table">
+          <div class="card-table-header">
+            <div>
+              <h3>Registros Amostrais</h3>
+              <span class="text-muted" id="data-count-info">Exibindo registros 1 a 25 de 1.470</span>
+            </div>
+            <div class="pagination-controls">
+              <button id="btn-prev-page" class="btn-secondary btn-sm" disabled>&larr; Anterior</button>
+              <span id="pagination-label" class="mono">Página 1</span>
+              <button id="btn-next-page" class="btn-secondary btn-sm">Próxima &rarr;</button>
+            </div>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table" id="table-raw-data">
+              <thead>
+                <tr>
+                  <th>Idade</th>
+                  <th>Saída (Attrition)</th>
+                  <th>Departamento</th>
+                  <th>Cargo</th>
+                  <th>Nível</th>
+                  <th>Renda Mensal</th>
+                  <th>Hora Extra</th>
+                  <th>Anos Empresa</th>
+                  <th>Anos Carreira</th>
+                  <th>IncomeGap (Resíduo)</th>
+                </tr>
+              </thead>
+              <tbody class="mono">
+
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+
+
+    <footer class="app-footer">
+      <div>Projeto de Modelagem Estatística — Avaliação Semestral</div>
+      <div class="mono">Dataset: IBM HR Analytics | α = 0,05 | N = 1.470</div>
+    </footer>
+  </div>
+
+  <script src="app.js?v=white-baseline"></script>
+</body>
+
+</html>
